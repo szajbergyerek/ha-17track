@@ -10,6 +10,7 @@ A Home Assistant custom integration for [17TRACK](https://www.17track.net/), a u
 - Sensor state is a human-readable sentence: `On <date> package "<name>": <latest event>`.
 - Attributes with structured data (tracking number, carrier, package status, last event time) for use in automations and dashboards.
 - Polls the 17TRACK API every 30 minutes.
+- A "Delete delivered packages" button and matching `track17.delete_delivered_packages` service to clear out every delivered package from 17TRACK in one go.
 
 Package registration itself is not handled by this integration; register tracking numbers via the 17TRACK website or app, and this integration will pick them up automatically.
 
@@ -36,6 +37,17 @@ Package registration itself is not handled by this integration; register trackin
 ## Using with voice assistants
 
 To let Assist (or any exposed conversation agent) answer questions like "where are my packages", expose the `track17` sensors under **Settings** → **Voice assistants** → **Entities**.
+
+Expose the "Delete delivered packages" button the same way to let Assist delete every delivered package on command (e.g. "press the delete delivered packages button").
+
+## Deleting delivered packages
+
+Every package's sensor is created and removed automatically, but delivered packages stay tracked (and visible) until removed. To clear them out in one go:
+
+- Press the **Delete delivered packages** button on your dashboard, or
+- Call the `track17.delete_delivered_packages` service from an automation or script.
+
+Both delete every package currently marked `Delivered` from 17TRACK and immediately refresh the remaining sensors.
 
 ## License
 
