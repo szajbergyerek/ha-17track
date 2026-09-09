@@ -66,6 +66,28 @@ class Track17Api:
 
         return packages
 
+    def delete_packages(self, packages: list) -> None:
+        """
+        Delete the given packages from 17TRACK so they are no longer tracked.
+
+        param packages: A list of dictionaries with "number" and "carrier" keys identifying the packages to delete.
+
+        :return: None
+        """
+        chunk_size = 40
+        for start in range(0, len(packages), chunk_size):
+            chunk = packages[start : start + chunk_size]
+            response = requests.post(
+                f"{self.base_url}/deletetrack",
+                headers=self._headers(),
+                json=[{"number": package["number"], "carrier": package["carrier"]} for package in chunk],
+                timeout=15,
+            )
+            response.raise_for_status()
+            result = response.json()
+            if result["code"] != 0:
+                raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
+
 
 def format_package_status(package: dict) -> str:
     """

@@ -16,5 +16,11 @@
         "abort": {
             "already_configured": "This 17TRACK account is already configured."
         }
+    },
+    "services": {
+        "delete_delivered_packages": {
+            "name": "Delete delivered packages",
+            "description": "Deletes every package currently marked as delivered from all configured 17TRACK accounts."
+        }
     }
 }

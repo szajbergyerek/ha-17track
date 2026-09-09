@@ -49,3 +49,21 @@ class Track17Coordinator(DataUpdateCoordinator[dict]):
             raise UpdateFailed(f"Error communicating with 17TRACK API: {error}") from error
 
         return {package["number"]: package for package in packages}
+
+    async def async_delete_delivered_packages(self) -> int:
+        """
+        Delete every currently delivered package from 17TRACK and refresh the coordinator data.
+
+        :return: The number of packages that were deleted.
+        """
+        delivered_packages = [
+            package for package in self.data.values() if package["package_status"] == "Delivered"
+        ]
+        if delivered_packages:
+            try:
+                await self.hass.async_add_executor_job(self.api.delete_packages, delivered_packages)
+            except Track17ApiError as error:
+                raise UpdateFailed(f"Error communicating with 17TRACK API: {error}") from error
+
+        await self.async_request_refresh()
+        return len(delivered_packages)
