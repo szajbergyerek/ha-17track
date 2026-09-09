@@ -1,5 +1,7 @@
 # 17TRACK for Home Assistant
 
+<img src="logo.png" alt="17TRACK for Home Assistant logo" width="128" height="128">
+
 A Home Assistant custom integration for [17TRACK](https://www.17track.net/), a universal package tracking service. Register your packages on the 17TRACK website or app, and this integration will surface each one as a sensor entity in Home Assistant.
 
 ## Features
