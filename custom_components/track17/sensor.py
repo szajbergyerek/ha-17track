@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .api import format_package_status
+from .api import format_package_status, get_package_description
 from .const import DOMAIN
 from .coordinator import Track17Coordinator
 
@@ -108,12 +108,13 @@ class PackageSensor(CoordinatorEntity[Track17Coordinator], SensorEntity):
         """
         Return additional package details as sensor attributes for use on dashboards.
 
-        :return: A dictionary with the tracking number, carrier, package status, and last event time.
+        :return: A dictionary with the tracking number, carrier, package status, description, and last event time.
         """
         package = self._package
         return {
             "tracking_number": self.tracking_number,
             "carrier": package.get("carrier"),
             "package_status": package.get("package_status"),
+            "description": get_package_description(package) if package else None,
             "last_event_time": package.get("latest_event_time"),
         }

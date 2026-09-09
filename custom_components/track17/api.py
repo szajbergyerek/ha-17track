@@ -89,6 +89,17 @@ class Track17Api:
                 raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
 
 
+def get_package_description(package: dict) -> str:
+    """
+    Extract the latest event description from a raw package entry, without the trailing tracking number.
+
+    param package: One package dictionary as returned by the 17TRACK gettracklist endpoint.
+
+    :return: The cleaned latest event description.
+    """
+    return (package.get("latest_event_info") or "").split("Tracking number:")[0].strip()
+
+
 def format_package_status(package: dict) -> str:
     """
     Format one raw package entry as 'On <date> package "<name>": <message>'.
@@ -98,7 +109,6 @@ def format_package_status(package: dict) -> str:
     :return: The formatted status sentence for this package.
     """
     package_name = package.get("tag") or package["number"]
-    description = (package.get("latest_event_info") or "").split("Tracking number:")[0].strip()
     time_iso = package.get("latest_event_time")
     formatted_date = datetime.fromisoformat(time_iso).strftime("%Y.%m.%d %H:%M") if time_iso else "unknown date"
-    return f'On {formatted_date} package "{package_name}": {description}'
+    return f'On {formatted_date} package "{package_name}": {get_package_description(package)}'
