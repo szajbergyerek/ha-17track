@@ -1,3 +1,15 @@
 delete_delivered_packages:
   name: Delete delivered packages
   description: Deletes every package currently marked as delivered from all configured 17TRACK accounts.
+
+register_package:
+  name: Register package
+  description: Registers a new tracking number with 17TRACK so it starts being tracked.
+  fields:
+    tracking_number:
+      name: Tracking number
+      description: The tracking number to register for tracking.
+      required: true
+      example: "YT2534627690112345"
+      selector:
+        text:

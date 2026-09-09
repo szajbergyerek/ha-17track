@@ -37,9 +37,9 @@ class Track17Coordinator(DataUpdateCoordinator[dict]):
 
     async def _async_update_data(self) -> dict:
         """
-        Fetch the latest package list from 17TRACK and index it by tracking number.
+        Fetch the latest package list from 17TRACK, auto-delete delivered packages, and index the rest by tracking number.
 
-        :return: A dictionary mapping tracking number to its raw package data.
+        :return: A dictionary mapping tracking number to its raw package data, excluding packages just deleted.
         """
         try:
             packages = await self.hass.async_add_executor_job(self.api.get_all_packages)
@@ -48,7 +48,28 @@ class Track17Coordinator(DataUpdateCoordinator[dict]):
         except Exception as error:
             raise UpdateFailed(f"Error communicating with 17TRACK API: {error}") from error
 
+        delivered_packages = [package for package in packages if package["package_status"] == "Delivered"]
+        if delivered_packages:
+            try:
+                await self.hass.async_add_executor_job(self.api.delete_packages, delivered_packages)
+            except Track17ApiError as error:
+                _LOGGER.warning("Failed to auto-delete delivered packages: %s", error)
+            else:
+                delivered_numbers = {package["number"] for package in delivered_packages}
+                packages = [package for package in packages if package["number"] not in delivered_numbers]
+
         return {package["number"]: package for package in packages}
+
+    async def async_register_package(self, tracking_number: str) -> None:
+        """
+        Register a new tracking number with 17TRACK and refresh the package list.
+
+        param tracking_number: The tracking number to register for tracking.
+
+        :return: None
+        """
+        await self.hass.async_add_executor_job(self.api.register_package, tracking_number)
+        await self.async_request_refresh()
 
     async def async_delete_delivered_packages(self) -> int:
         """

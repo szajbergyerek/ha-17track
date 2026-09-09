@@ -89,6 +89,32 @@ class Track17Api:
                 raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
 
 
+    def register_package(self, tracking_number: str) -> None:
+        """
+        Register a new tracking number with 17TRACK so it starts being tracked.
+
+        param tracking_number: The tracking number to register for tracking.
+
+        :return: None
+        """
+        response = requests.post(
+            f"{self.base_url}/register",
+            headers=self._headers(),
+            json=[{"number": tracking_number}],
+            timeout=15,
+        )
+        response.raise_for_status()
+        result = response.json()
+
+        if result["code"] != 0:
+            raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
+
+        rejected = result["data"].get("rejected") or []
+        if rejected:
+            reason = rejected[0].get("error", {}).get("message", "Unknown reason")
+            raise Track17ApiError(f'17TRACK rejected tracking number "{tracking_number}": {reason}')
+
+
 def get_package_description(package: dict) -> str:
     """
     Extract the latest event description from a raw package entry, without the trailing tracking number.
