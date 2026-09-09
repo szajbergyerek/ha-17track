@@ -1,0 +1,12 @@
+{
+    "domain": "track17",
+    "name": "17TRACK",
+    "codeowners": ["@szajbergyerek"],
+    "config_flow": true,
+    "documentation": "https://github.com/szajbergyerek/ha-17track",
+    "issue_tracker": "https://github.com/szajbergyerek/ha-17track/issues",
+    "integration_type": "hub",
+    "iot_class": "cloud_polling",
+    "requirements": ["requests>=2.31.0"],
+    "version": "1.0.0"
+}

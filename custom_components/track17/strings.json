@@ -1,0 +1,20 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Connect to 17TRACK",
+                "description": "Enter your 17TRACK API key. You can find it in your 17TRACK account under Security Setting.",
+                "data": {
+                    "api_key": "API key"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to the 17TRACK API.",
+            "invalid_auth": "Invalid API key."
+        },
+        "abort": {
+            "already_configured": "This 17TRACK account is already configured."
+        }
+    }
+}
