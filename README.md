@@ -9,7 +9,7 @@ A Home Assistant custom integration for [17TRACK](https://www.17track.net/), a u
 - One sensor per package registered on your 17TRACK account, created and removed automatically.
 - Sensor state is a human-readable sentence: `On <date> package "<name>": <latest event>`.
 - Attributes with structured data (tracking number, carrier, package status, last event time) for use in automations and dashboards.
-- Polls the 17TRACK API every 30 minutes.
+- Polls the 17TRACK API every 15 minutes. This only reads existing data (`gettracklist`), so it never consumes your registration quota, however often it runs.
 - A "Delete delivered packages" button and matching `track17.delete_delivered_packages` service to clear out every delivered package from 17TRACK in one go.
 
 Package registration itself is not handled by this integration; register tracking numbers via the 17TRACK website or app, and this integration will pick them up automatically.
