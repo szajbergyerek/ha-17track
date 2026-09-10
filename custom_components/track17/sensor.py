@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -13,11 +15,33 @@ from .const import DOMAIN
 from .coordinator import Track17Coordinator
 
 
+def _unique_id_for(tracking_number: str) -> str:
+    """
+    Build the unique id used for a package sensor entity.
+
+    param tracking_number: The tracking number the sensor represents.
+
+    :return: The unique id for this tracking number's sensor entity.
+    """
+    return f"track17_{tracking_number}"
+
+
+def _tracking_number_from_unique_id(unique_id: str) -> str:
+    """
+    Recover the tracking number from a package sensor's unique id.
+
+    param unique_id: The unique id of a package sensor entity, as built by _unique_id_for.
+
+    :return: The tracking number encoded in the unique id.
+    """
+    return unique_id.removeprefix("track17_")
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """
-    Set up 17TRACK package sensors from a config entry, adding new sensors as new packages appear.
+    Set up 17TRACK package sensors from a config entry, keeping entities in sync with coordinator data.
 
     param hass: The Home Assistant instance.
     param entry: The config entry for this 17TRACK account.
@@ -26,25 +50,44 @@ async def async_setup_entry(
     :return: None
     """
     coordinator: Track17Coordinator = hass.data[DOMAIN][entry.entry_id]
+    entity_registry = er.async_get(hass)
     known_tracking_numbers: set[str] = set()
 
-    def _add_new_package_sensors() -> None:
+    for registry_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
+        if registry_entry.domain != SENSOR_DOMAIN:
+            continue
+
+        tracking_number = _tracking_number_from_unique_id(registry_entry.unique_id)
+        if tracking_number in coordinator.data:
+            known_tracking_numbers.add(tracking_number)
+        else:
+            entity_registry.async_remove(registry_entry.entity_id)
+
+    def _sync_package_sensors() -> None:
         """
-        Create sensor entities for any tracking numbers not yet represented in Home Assistant.
+        Add sensor entities for newly tracked packages and remove them for packages no longer tracked.
 
         :return: None
         """
-        new_entities = [
-            PackageSensor(coordinator, tracking_number)
-            for tracking_number in coordinator.data
-            if tracking_number not in known_tracking_numbers
-        ]
-        if new_entities:
-            known_tracking_numbers.update(entity.tracking_number for entity in new_entities)
-            async_add_entities(new_entities)
+        current_tracking_numbers = set(coordinator.data)
 
-    _add_new_package_sensors()
-    coordinator.async_add_listener(_add_new_package_sensors)
+        new_tracking_numbers = current_tracking_numbers - known_tracking_numbers
+        if new_tracking_numbers:
+            async_add_entities([PackageSensor(coordinator, tracking_number) for tracking_number in new_tracking_numbers])
+
+        removed_tracking_numbers = known_tracking_numbers - current_tracking_numbers
+        for tracking_number in removed_tracking_numbers:
+            entity_id = entity_registry.async_get_entity_id(
+                SENSOR_DOMAIN, DOMAIN, _unique_id_for(tracking_number)
+            )
+            if entity_id is not None:
+                entity_registry.async_remove(entity_id)
+
+        known_tracking_numbers.clear()
+        known_tracking_numbers.update(current_tracking_numbers)
+
+    _sync_package_sensors()
+    coordinator.async_add_listener(_sync_package_sensors)
 
 
 class PackageSensor(CoordinatorEntity[Track17Coordinator], SensorEntity):
@@ -64,7 +107,7 @@ class PackageSensor(CoordinatorEntity[Track17Coordinator], SensorEntity):
         """
         super().__init__(coordinator)
         self.tracking_number = tracking_number
-        self._attr_unique_id = f"track17_{tracking_number}"
+        self._attr_unique_id = _unique_id_for(tracking_number)
 
     @property
     def _package(self) -> dict:
