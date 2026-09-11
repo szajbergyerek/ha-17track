@@ -52,11 +52,20 @@ class Track17Coordinator(DataUpdateCoordinator[dict]):
         """
         Register a new tracking number with 17TRACK and refresh the package list.
 
+        Re-registering a tracking number that is already tracked without a new tag keeps its existing
+        tag, rather than clearing it - 17TRACK's register endpoint otherwise resets the tag to nothing
+        whenever a tag isn't included in the request.
+
         param tracking_number: The tracking number to register for tracking.
         param tag: Optional user-facing label for the package, shown instead of the tracking number.
 
         :return: None
         """
+        if not tag:
+            existing_package = self.data.get(tracking_number)
+            if existing_package:
+                tag = existing_package.get("tag") or None
+
         await self.hass.async_add_executor_job(self.api.register_package, tracking_number, tag)
         await self.async_request_refresh()
 
