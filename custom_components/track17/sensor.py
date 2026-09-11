@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
@@ -18,6 +19,8 @@ from .const import DOMAIN
 from .coordinator import Track17Coordinator
 
 CONVERSATION_ASSISTANT = "conversation"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _unique_id_for(tracking_number: str) -> str:
@@ -105,16 +108,25 @@ async def async_setup_entry(
         """
         for tracking_number in tracking_numbers:
             entity_id = None
-            for _ in range(10):
+            for _ in range(50):
                 entity_id = entity_registry.async_get_entity_id(
                     SENSOR_DOMAIN, DOMAIN, _unique_id_for(tracking_number)
                 )
                 if entity_id is not None:
                     break
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.2)
 
-            if entity_id is not None:
+            if entity_id is None:
+                _LOGGER.warning(
+                    "Could not find entity id for tracking number %s, not exposing it to conversation",
+                    tracking_number,
+                )
+                continue
+
+            try:
                 async_expose_entity(hass, CONVERSATION_ASSISTANT, entity_id, True)
+            except Exception:
+                _LOGGER.exception("Failed to expose %s to conversation", entity_id)
 
     _sync_package_sensors()
     coordinator.async_add_listener(_sync_package_sensors)
