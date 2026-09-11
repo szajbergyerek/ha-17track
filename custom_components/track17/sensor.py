@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+
+from homeassistant.components.homeassistant.exposed_entities import async_expose_entity
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -13,6 +16,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .api import format_package_status, get_package_description
 from .const import DOMAIN
 from .coordinator import Track17Coordinator
+
+CONVERSATION_ASSISTANT = "conversation"
 
 
 def _unique_id_for(tracking_number: str) -> str:
@@ -53,14 +58,16 @@ async def async_setup_entry(
     entity_registry = er.async_get(hass)
     known_tracking_numbers: set[str] = set()
 
+    # Entity registry entries survive a restart, but the entities themselves don't - every package
+    # in coordinator.data still needs a fresh PackageSensor instance below, regardless of whether it
+    # already has a registry entry from before. This loop only clears out registry entries for
+    # packages that are no longer tracked at all.
     for registry_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
         if registry_entry.domain != SENSOR_DOMAIN:
             continue
 
         tracking_number = _tracking_number_from_unique_id(registry_entry.unique_id)
-        if tracking_number in coordinator.data:
-            known_tracking_numbers.add(tracking_number)
-        else:
+        if tracking_number not in coordinator.data:
             entity_registry.async_remove(registry_entry.entity_id)
 
     def _sync_package_sensors() -> None:
@@ -74,6 +81,7 @@ async def async_setup_entry(
         new_tracking_numbers = current_tracking_numbers - known_tracking_numbers
         if new_tracking_numbers:
             async_add_entities([PackageSensor(coordinator, tracking_number) for tracking_number in new_tracking_numbers])
+            hass.async_create_task(_expose_new_packages(new_tracking_numbers))
 
         removed_tracking_numbers = known_tracking_numbers - current_tracking_numbers
         for tracking_number in removed_tracking_numbers:
@@ -85,6 +93,28 @@ async def async_setup_entry(
 
         known_tracking_numbers.clear()
         known_tracking_numbers.update(current_tracking_numbers)
+
+    async def _expose_new_packages(tracking_numbers: set[str]) -> None:
+        """
+        Expose newly added package sensors to conversation agents (e.g. voice assistants) by default,
+        so a freshly registered package doesn't need to be exposed manually before it can be asked about.
+
+        param tracking_numbers: The tracking numbers whose sensors were just added.
+
+        :return: None
+        """
+        for tracking_number in tracking_numbers:
+            entity_id = None
+            for _ in range(10):
+                entity_id = entity_registry.async_get_entity_id(
+                    SENSOR_DOMAIN, DOMAIN, _unique_id_for(tracking_number)
+                )
+                if entity_id is not None:
+                    break
+                await asyncio.sleep(0.1)
+
+            if entity_id is not None:
+                async_expose_entity(hass, CONVERSATION_ASSISTANT, entity_id, True)
 
     _sync_package_sensors()
     coordinator.async_add_listener(_sync_package_sensors)
