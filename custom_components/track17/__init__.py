@@ -14,18 +14,21 @@ from .const import (
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
     SERVICE_DELETE_DELIVERED_PACKAGES,
+    SERVICE_DELETE_PACKAGE,
     SERVICE_REGISTER_PACKAGE,
 )
 from .coordinator import Track17Coordinator
 
 ATTR_TRACKING_NUMBER = "tracking_number"
 ATTR_TAG = "tag"
+ATTR_IDENTIFIER = "identifier"
 SERVICE_REGISTER_PACKAGE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_TRACKING_NUMBER): cv.string,
         vol.Optional(ATTR_TAG): cv.string,
     }
 )
+SERVICE_DELETE_PACKAGE_SCHEMA = vol.Schema({vol.Required(ATTR_IDENTIFIER): cv.string})
 
 PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 
@@ -66,6 +69,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_DELETE_DELIVERED_PACKAGES)
             hass.services.async_remove(DOMAIN, SERVICE_REGISTER_PACKAGE)
+            hass.services.async_remove(DOMAIN, SERVICE_DELETE_PACKAGE)
     return unload_ok
 
 
@@ -115,4 +119,33 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
         hass.services.async_register(
             DOMAIN, SERVICE_REGISTER_PACKAGE, _handle_register_package, schema=SERVICE_REGISTER_PACKAGE_SCHEMA
+        )
+
+    if not hass.services.has_service(DOMAIN, SERVICE_DELETE_PACKAGE):
+
+        async def _handle_delete_package(call: ServiceCall) -> None:
+            """
+            Delete a single package, identified by its tag or tracking number, from whichever configured
+            17TRACK account currently tracks it.
+
+            param call: The service call containing the tag or tracking number identifying the package.
+
+            :return: None
+            """
+            identifier = call.data[ATTR_IDENTIFIER]
+            last_error: Track17ApiError | None = None
+            for coordinator in hass.data[DOMAIN].values():
+                try:
+                    await coordinator.async_delete_package(identifier)
+                except Track17ApiError as error:
+                    last_error = error
+                else:
+                    last_error = None
+                    break
+
+            if last_error is not None:
+                raise HomeAssistantError(str(last_error))
+
+        hass.services.async_register(
+            DOMAIN, SERVICE_DELETE_PACKAGE, _handle_delete_package, schema=SERVICE_DELETE_PACKAGE_SCHEMA
         )

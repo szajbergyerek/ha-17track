@@ -22,6 +22,16 @@
             "name": "Delete delivered packages",
             "description": "Deletes every package currently marked as delivered from all configured 17TRACK accounts."
         },
+        "delete_package": {
+            "name": "Delete package",
+            "description": "Deletes a single package, identified by its tag or tracking number.",
+            "fields": {
+                "identifier": {
+                    "name": "Identifier",
+                    "description": "The package's tag (e.g. \"Csapágy\") or tracking number."
+                }
+            }
+        },
         "register_package": {
             "name": "Register package",
             "description": "Registers a new tracking number with 17TRACK so it starts being tracked.",

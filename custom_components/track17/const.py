@@ -5,3 +5,4 @@ DEFAULT_SCAN_INTERVAL_MINUTES = 15
 DEFAULT_BASE_URL = "https://api.17track.net/track/v2.4"
 SERVICE_DELETE_DELIVERED_PACKAGES = "delete_delivered_packages"
 SERVICE_REGISTER_PACKAGE = "register_package"
+SERVICE_DELETE_PACKAGE = "delete_package"
