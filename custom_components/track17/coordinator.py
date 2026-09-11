@@ -45,8 +45,6 @@ class Track17Coordinator(DataUpdateCoordinator[dict]):
             packages = await self.hass.async_add_executor_job(self.api.get_all_packages)
         except Track17ApiError as error:
             raise UpdateFailed(f"Error communicating with 17TRACK API: {error}") from error
-        except Exception as error:
-            raise UpdateFailed(f"Error communicating with 17TRACK API: {error}") from error
 
         delivered_packages = [package for package in packages if package["package_status"] == "Delivered"]
         if delivered_packages:

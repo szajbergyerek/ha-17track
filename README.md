@@ -10,9 +10,21 @@ A Home Assistant custom integration for [17TRACK](https://www.17track.net/), a u
 - Sensor state is a human-readable sentence: `On <date> package "<name>": <latest event>`.
 - Attributes with structured data (tracking number, carrier, package status, last event time) for use in automations and dashboards.
 - Polls the 17TRACK API every 15 minutes. This only reads existing data (`gettracklist`), so it never consumes your registration quota, however often it runs.
-- A "Delete delivered packages" button and matching `track17.delete_delivered_packages` service to clear out every delivered package from 17TRACK in one go.
+- A `track17.register_package` service (and matching `input_text` + automation pattern, see below) to register a new tracking number from Home Assistant, optionally with a custom tag/name.
+- A "Delete delivered packages" button and matching `track17.delete_delivered_packages` service to immediately clear out every delivered package from 17TRACK. Delivered packages are also removed automatically on every 15-minute poll, so the button/service is mainly useful when you don't want to wait for the next poll.
 
-Package registration itself is not handled by this integration; register tracking numbers via the 17TRACK website or app, and this integration will pick them up automatically.
+You can also register tracking numbers directly via the 17TRACK website or app; this integration will pick them up automatically either way.
+
+## Registering a package
+
+Call the `track17.register_package` service with a `tracking_number` and an optional `tag` (a custom label shown instead of the raw tracking number, both on the sensor and to voice assistants):
+
+```yaml
+action: track17.register_package
+data:
+  tracking_number: "YT2534627690112345"
+  tag: "Csapágy"
+```
 
 ## Installation
 
@@ -42,7 +54,7 @@ Expose the "Delete delivered packages" button the same way to let Assist delete 
 
 ## Deleting delivered packages
 
-Every package's sensor is created and removed automatically, but delivered packages stay tracked (and visible) until removed. To clear them out in one go:
+Delivered packages are removed from 17TRACK (and disappear from Home Assistant) automatically the next time the integration polls, at most 15 minutes after delivery. To remove them immediately instead of waiting for the next poll:
 
 - Press the **Delete delivered packages** button on your dashboard, or
 - Call the `track17.delete_delivered_packages` service from an automation or script.

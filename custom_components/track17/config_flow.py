@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from typing import Any
 
@@ -12,12 +13,23 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from .api import Track17Api, Track17ApiError
+from .api import Track17Api, Track17ApiError, Track17ConnectionError
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema({vol.Required(CONF_API_KEY): str})
+
+
+def _unique_id_for(api_key: str) -> str:
+    """
+    Derive a config entry unique id from an API key without storing the key itself as the id.
+
+    param api_key: The 17TRACK API key to derive a unique id from.
+
+    :return: A SHA-256 hex digest of the API key.
+    """
+    return hashlib.sha256(api_key.encode()).hexdigest()
 
 
 async def _validate_api_key(hass: HomeAssistant, api_key: str) -> None:
@@ -32,10 +44,10 @@ async def _validate_api_key(hass: HomeAssistant, api_key: str) -> None:
     api = Track17Api(api_key)
     try:
         await hass.async_add_executor_job(api.get_all_packages)
+    except Track17ConnectionError as error:
+        raise CannotConnect from error
     except Track17ApiError as error:
         raise InvalidAuth from error
-    except Exception as error:
-        raise CannotConnect from error
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -54,7 +66,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(user_input[CONF_API_KEY])
+            await self.async_set_unique_id(_unique_id_for(user_input[CONF_API_KEY]))
             self._abort_if_unique_id_configured()
 
             try:

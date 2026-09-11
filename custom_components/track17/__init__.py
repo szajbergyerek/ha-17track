@@ -6,9 +6,10 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
-from .api import Track17Api
+from .api import Track17Api, Track17ApiError
 from .const import (
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
@@ -86,8 +87,11 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
             :return: None
             """
-            for coordinator in hass.data[DOMAIN].values():
-                await coordinator.async_delete_delivered_packages()
+            try:
+                for coordinator in hass.data[DOMAIN].values():
+                    await coordinator.async_delete_delivered_packages()
+            except Track17ApiError as error:
+                raise HomeAssistantError(str(error)) from error
 
         hass.services.async_register(DOMAIN, SERVICE_DELETE_DELIVERED_PACKAGES, _handle_delete_delivered_packages)
 
@@ -103,8 +107,11 @@ def _async_register_services(hass: HomeAssistant) -> None:
             """
             tracking_number = call.data[ATTR_TRACKING_NUMBER]
             tag = call.data.get(ATTR_TAG)
-            for coordinator in hass.data[DOMAIN].values():
-                await coordinator.async_register_package(tracking_number, tag)
+            try:
+                for coordinator in hass.data[DOMAIN].values():
+                    await coordinator.async_register_package(tracking_number, tag)
+            except Track17ApiError as error:
+                raise HomeAssistantError(str(error)) from error
 
         hass.services.async_register(
             DOMAIN, SERVICE_REGISTER_PACKAGE, _handle_register_package, schema=SERVICE_REGISTER_PACKAGE_SCHEMA

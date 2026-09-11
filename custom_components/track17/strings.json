@@ -29,6 +29,10 @@
                 "tracking_number": {
                     "name": "Tracking number",
                     "description": "The tracking number to register for tracking."
+                },
+                "tag": {
+                    "name": "Tag",
+                    "description": "Optional user-facing label for the package, shown instead of the tracking number."
                 }
             }
         }

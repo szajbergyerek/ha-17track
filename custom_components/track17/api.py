@@ -8,7 +8,11 @@ from .const import DEFAULT_BASE_URL
 
 
 class Track17ApiError(Exception):
-    """Raised when the 17TRACK API returns an error response."""
+    """Raised when the 17TRACK API returns an error response (bad API key, rejected tracking number, etc.)."""
+
+
+class Track17ConnectionError(Track17ApiError):
+    """Raised when the 17TRACK API could not be reached at all (network/timeout failure)."""
 
 
 class Track17Api:
@@ -36,6 +40,32 @@ class Track17Api:
             "Content-Type": "application/json",
         }
 
+    def _post(self, path: str, payload) -> dict:
+        """
+        POST a request to the given 17TRACK API path and return its decoded result.
+
+        param path: The API path to call, relative to the base url (e.g. "/register").
+        param payload: The JSON-serializable request body.
+
+        :return: The "result" object from the API response, once its top-level code has been checked.
+        """
+        try:
+            response = requests.post(
+                f"{self.base_url}{path}",
+                headers=self._headers(),
+                json=payload,
+                timeout=15,
+            )
+            response.raise_for_status()
+            result = response.json()
+        except requests.exceptions.RequestException as error:
+            raise Track17ConnectionError(f"Error communicating with the 17TRACK API: {error}") from error
+
+        if result["code"] != 0:
+            raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
+
+        return result
+
     def get_all_packages(self) -> list:
         """
         Fetch every package currently registered with 17TRACK, across all result pages.
@@ -46,18 +76,7 @@ class Track17Api:
         page_no = 1
 
         while True:
-            response = requests.post(
-                f"{self.base_url}/gettracklist",
-                headers=self._headers(),
-                json={"page_no": page_no},
-                timeout=15,
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if result["code"] != 0:
-                raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
-
+            result = self._post("/gettracklist", {"page_no": page_no})
             packages.extend(result["data"]["accepted"])
 
             if not result["page"]["has_next"]:
@@ -77,17 +96,10 @@ class Track17Api:
         chunk_size = 40
         for start in range(0, len(packages), chunk_size):
             chunk = packages[start : start + chunk_size]
-            response = requests.post(
-                f"{self.base_url}/deletetrack",
-                headers=self._headers(),
-                json=[{"number": package["number"], "carrier": package["carrier"]} for package in chunk],
-                timeout=15,
+            self._post(
+                "/deletetrack",
+                [{"number": package["number"], "carrier": package["carrier"]} for package in chunk],
             )
-            response.raise_for_status()
-            result = response.json()
-            if result["code"] != 0:
-                raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
-
 
     def register_package(self, tracking_number: str, tag: str | None = None) -> None:
         """
@@ -102,17 +114,7 @@ class Track17Api:
         if tag:
             item["tag"] = tag
 
-        response = requests.post(
-            f"{self.base_url}/register",
-            headers=self._headers(),
-            json=[item],
-            timeout=15,
-        )
-        response.raise_for_status()
-        result = response.json()
-
-        if result["code"] != 0:
-            raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
+        result = self._post("/register", [item])
 
         rejected = result["data"].get("rejected") or []
         if rejected:
