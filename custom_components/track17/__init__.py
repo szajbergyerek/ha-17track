@@ -26,9 +26,10 @@ SERVICE_REGISTER_PACKAGE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_TRACKING_NUMBER): cv.string,
         vol.Optional(ATTR_TAG): cv.string,
-    }
+    },
+    extra=vol.REMOVE_EXTRA,
 )
-SERVICE_DELETE_PACKAGE_SCHEMA = vol.Schema({vol.Required(ATTR_IDENTIFIER): cv.string})
+SERVICE_DELETE_PACKAGE_SCHEMA = vol.Schema({vol.Required(ATTR_IDENTIFIER): cv.string}, extra=vol.REMOVE_EXTRA)
 
 PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 
