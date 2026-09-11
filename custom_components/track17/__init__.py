@@ -18,7 +18,13 @@ from .const import (
 from .coordinator import Track17Coordinator
 
 ATTR_TRACKING_NUMBER = "tracking_number"
-SERVICE_REGISTER_PACKAGE_SCHEMA = vol.Schema({vol.Required(ATTR_TRACKING_NUMBER): cv.string})
+ATTR_TAG = "tag"
+SERVICE_REGISTER_PACKAGE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_TRACKING_NUMBER): cv.string,
+        vol.Optional(ATTR_TAG): cv.string,
+    }
+)
 
 PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 
@@ -91,13 +97,14 @@ def _async_register_services(hass: HomeAssistant) -> None:
             """
             Register a new tracking number across all configured 17TRACK accounts.
 
-            param call: The service call containing the tracking number to register.
+            param call: The service call containing the tracking number and optional tag to register.
 
             :return: None
             """
             tracking_number = call.data[ATTR_TRACKING_NUMBER]
+            tag = call.data.get(ATTR_TAG)
             for coordinator in hass.data[DOMAIN].values():
-                await coordinator.async_register_package(tracking_number)
+                await coordinator.async_register_package(tracking_number, tag)
 
         hass.services.async_register(
             DOMAIN, SERVICE_REGISTER_PACKAGE, _handle_register_package, schema=SERVICE_REGISTER_PACKAGE_SCHEMA

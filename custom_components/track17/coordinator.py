@@ -60,15 +60,16 @@ class Track17Coordinator(DataUpdateCoordinator[dict]):
 
         return {package["number"]: package for package in packages}
 
-    async def async_register_package(self, tracking_number: str) -> None:
+    async def async_register_package(self, tracking_number: str, tag: str | None = None) -> None:
         """
         Register a new tracking number with 17TRACK and refresh the package list.
 
         param tracking_number: The tracking number to register for tracking.
+        param tag: Optional user-facing label for the package, shown instead of the tracking number.
 
         :return: None
         """
-        await self.hass.async_add_executor_job(self.api.register_package, tracking_number)
+        await self.hass.async_add_executor_job(self.api.register_package, tracking_number, tag)
         await self.async_request_refresh()
 
     async def async_delete_delivered_packages(self) -> int:

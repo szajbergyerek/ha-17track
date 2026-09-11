@@ -89,18 +89,23 @@ class Track17Api:
                 raise Track17ApiError(result.get("message", "Unknown 17TRACK API error"))
 
 
-    def register_package(self, tracking_number: str) -> None:
+    def register_package(self, tracking_number: str, tag: str | None = None) -> None:
         """
         Register a new tracking number with 17TRACK so it starts being tracked.
 
         param tracking_number: The tracking number to register for tracking.
+        param tag: Optional user-facing label for the package, shown instead of the tracking number.
 
         :return: None
         """
+        item = {"number": tracking_number}
+        if tag:
+            item["tag"] = tag
+
         response = requests.post(
             f"{self.base_url}/register",
             headers=self._headers(),
-            json=[{"number": tracking_number}],
+            json=[item],
             timeout=15,
         )
         response.raise_for_status()

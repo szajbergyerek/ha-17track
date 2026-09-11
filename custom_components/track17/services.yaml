@@ -13,3 +13,10 @@ register_package:
       example: "YT2534627690112345"
       selector:
         text:
+    tag:
+      name: Tag
+      description: Optional user-facing label for the package, shown instead of the tracking number.
+      required: false
+      example: "Csapágy"
+      selector:
+        text:
