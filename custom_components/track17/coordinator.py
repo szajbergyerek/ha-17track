@@ -62,6 +62,7 @@ class Track17Coordinator(DataUpdateCoordinator[dict]):
 
         :return: None
         """
+        tracking_number = "".join(tracking_number.split())
         existing_package = self.data.get(tracking_number)
         if existing_package:
             if not tag:
@@ -80,11 +81,12 @@ class Track17Coordinator(DataUpdateCoordinator[dict]):
         :return: None
         """
         identifier_lower = identifier.lower()
+        identifier_as_number = "".join(identifier_lower.split())
         package = next(
             (
                 package
                 for package in self.data.values()
-                if package["number"].lower() == identifier_lower
+                if package["number"].lower() == identifier_as_number
                 or (package.get("tag") or "").lower() == identifier_lower
             ),
             None,
