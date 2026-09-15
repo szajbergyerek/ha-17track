@@ -4,7 +4,7 @@ from datetime import datetime
 
 import requests
 
-from .const import DEFAULT_BASE_URL
+from .const import DEFAULT_BASE_URL, ERROR_CODE_CARRIER_NOT_DETECTED, FALLBACK_CARRIER
 
 
 class Track17ApiError(Exception):
@@ -105,6 +105,10 @@ class Track17Api:
         """
         Register a new tracking number with 17TRACK so it starts being tracked.
 
+        If 17TRACK can't auto-detect the carrier, retries once forcing FALLBACK_CARRIER, since that's
+        this household's actual courier and 17TRACK's auto-detection doesn't reliably recognize its
+        tracking number format.
+
         param tracking_number: The tracking number to register for tracking.
         param tag: Optional user-facing label for the package, shown instead of the tracking number.
 
@@ -115,8 +119,12 @@ class Track17Api:
             item["tag"] = tag
 
         result = self._post("/register", [item])
-
         rejected = result["data"].get("rejected") or []
+
+        if rejected and rejected[0].get("error", {}).get("code") == ERROR_CODE_CARRIER_NOT_DETECTED:
+            result = self._post("/register", [{**item, "carrier": FALLBACK_CARRIER}])
+            rejected = result["data"].get("rejected") or []
+
         if rejected:
             reason = rejected[0].get("error", {}).get("message", "Unknown reason")
             raise Track17ApiError(f'17TRACK rejected tracking number "{tracking_number}": {reason}')

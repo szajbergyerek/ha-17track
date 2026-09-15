@@ -27,6 +27,10 @@ data:
   tag: "Csapágy"
 ```
 
+Tracking numbers containing spaces (common - many carriers print them that way) have the whitespace stripped automatically before being sent to 17TRACK.
+
+If 17TRACK can't auto-detect the carrier for a tracking number, it's automatically retried once forcing Zasilkovna/Packeta (17TRACK carrier key `100419`) - this household's actual courier, whose tracking number format 17TRACK's auto-detection doesn't reliably recognize. If you ever add packages from a different carrier that also fails auto-detection, this fallback will need to become configurable instead of hardcoded.
+
 ## Installation
 
 ### Via HACS
